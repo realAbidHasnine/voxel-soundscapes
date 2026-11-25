@@ -6,8 +6,7 @@ This project was built with help from AI coding agents. As the hackathon rules r
 
 | Tool | Model | Used for |
 |------|-------|----------|
-| _e.g. Devin_ | _model name_ | _planning, algorithm-to-music mapping_ |
-| _e.g. OpenCode_ | _model name_ | _code generation_ |
+| Devin | GPT-6 Astra Medium Thinking | Project review, implementation planning, and application scaffold |
 
 ## How the Log Is Organized
 
