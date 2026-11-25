@@ -42,6 +42,8 @@ user interaction.
 Next: generate a deterministic seeded fractal tree and a musical event list,
 then build and tune playback before adding the visualization.
 
+See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
+
 ## AI usage
 
 See [AI_Policy.md](AI_Policy.md) for the required prompt and response logging

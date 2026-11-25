@@ -1,0 +1,1 @@
+no no. the problem is the prompt says "lets start with step 1" but judge will never know what is step 1 so and a new file in the repo that will show which step does what but keep the steps minimum they will only need to know what is being done in that step not how its done
