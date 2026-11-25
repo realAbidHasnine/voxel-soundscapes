@@ -1,0 +1,1 @@
+in prompts add all the steps but keep the steps points minimum . will just show the log not the workflow of the step
