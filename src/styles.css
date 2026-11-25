@@ -21,3 +21,28 @@ body {
   color: #101c19;
   background: #a7f3d0;
 }
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #a7f3d0;
+  outline-offset: 5px;
+}
+
+progress {
+  appearance: none;
+  border: 0;
+  background: #33433b;
+  color: #a7f3d0;
+}
+
+progress::-webkit-progress-bar {
+  background: #33433b;
+}
+
+progress::-webkit-progress-value {
+  background: #a7f3d0;
+}
+
+progress::-moz-progress-bar {
+  background: #a7f3d0;
+}

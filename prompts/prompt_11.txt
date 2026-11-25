@@ -1,0 +1,1 @@
+in prompts create a response/ and from now you will add every response as .md like response_{promp summary}.md starting with this

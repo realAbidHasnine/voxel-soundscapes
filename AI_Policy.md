@@ -6,7 +6,8 @@ This project was built with help from AI coding agents. As the hackathon rules r
 
 | Tool | Model | Used for |
 |------|-------|----------|
-| Devin | GPT-6 Astra Medium Thinking | Project review, planning, application scaffold, recursive trees, and musical events |
+| Devin | GPT-6 Astra Medium Thinking | Project review, planning, scaffold, recursive trees, musical events, and audio playback |
+| Command Code | Claude | Continued after Devin's quota ran out: finished the audio playback commit, then canvas visualization, controls, export, and polish |
 
 ## How the Log Is Organized
 
@@ -15,14 +16,17 @@ prompts/
 ├── prompt_1.txt
 ├── prompt_2.txt
 ├── prompt_3.txt
-└── ...
+├── ...
+└── response/
+    ├── response_<prompt summary>.md
+    └── ...
 ```
 
 - **Prompt:** each `prompts/prompt_N.txt` holds one prompt, copied **verbatim** exactly as it was sent to the AI.
-- **Response:** the agent's response to `prompt_N` is recorded in the **commit** that adds `prompt_N.txt`. The commit holds:
-  - the code or files the agent produced or changed
-  - the agent's text response in the commit message (summary in the subject, full response in the body)
-- **Order:** `N` increases in the order the prompts were sent, so the files read as the full prompt chain.
+- **Response:** each agent response is saved as `prompts/response/response_<prompt summary>.md`,
+  starting with the first Command Code session. Responses written before that folder
+  existed live in the commit message instead.
+- **Order:** prompts increase in the order they were sent, so the files read as the full prompt chain.
 
 ## Commit Convention
 
@@ -58,10 +62,17 @@ List every prompt and the commit that answers it:
 git log --reverse --format="%h %s" -- prompts/
 ```
 
-See one prompt and its full response plus code changes:
+Read a response:
 
 ```bash
-git log --format="%B" -1 -- prompts/prompt_3.txt   # response text
+ls prompts/response/
+cat prompts/response/response_<prompt summary>.md
+```
+
+See one prompt with its commit and code changes:
+
+```bash
+git log --format="%B" -1 -- prompts/prompt_3.txt   # response text (older prompts)
 git show <commit-hash>                             # code changes
 ```
 
