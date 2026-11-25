@@ -6,7 +6,7 @@ This project was built with help from AI coding agents. As the hackathon rules r
 
 | Tool | Model | Used for |
 |------|-------|----------|
-| Devin | GPT-6 Astra Medium Thinking | Project review, planning, application scaffold, and recursive tree generation |
+| Devin | GPT-6 Astra Medium Thinking | Project review, planning, application scaffold, recursive trees, and musical events |
 
 ## How the Log Is Organized
 

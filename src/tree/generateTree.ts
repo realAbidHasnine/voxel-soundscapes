@@ -1,3 +1,5 @@
+import { mulberry32 } from '../random/mulberry32'
+
 export interface TreeParameters {
   readonly seed: number
   /** Root depth is zero. The core supports 0–9; the planned UI uses 4–9. */
@@ -60,17 +62,6 @@ function assertRange(
     throw new RangeError(
       `${name} must be ${integer ? 'an integer' : 'a finite number'} between ${min} and ${max}.`,
     )
-  }
-}
-
-/** Mulberry32: local state ensures other trees cannot change this sequence. */
-function mulberry32(seed: number) {
-  let state = seed
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0
-    let value = Math.imul(state ^ (state >>> 15), state | 1)
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
   }
 }
 
