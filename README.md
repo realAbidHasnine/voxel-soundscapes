@@ -47,12 +47,16 @@ The deterministic recursive tree and score generators drive Tone.js playback and
 synchronized canvas. The screen shows the tree beside the controls; each branch
 blooms as its level plays. Controls provide Play/Pause/Resume, Stop, volume,
 elapsed time, and playback progress, plus a Shape panel for max depth, branching,
-spread, and tempo with a Regrow button for a new seed. Press Play to hear and see
-it. Audio export, presets, and ambient loops are future work.
+spread, and tempo with a Regrow button for a new seed. Download renders the
+current soundscape to a 16-bit PCM `.wav`. Audio presets and ambient loops are
+future work.
 
 - `src/App.tsx`: accessible playback screen with the tree beside the controls.
 - `src/controls/soundParameters.ts`: display units to generator parameters, limits, and seed rotation.
 - `src/controls/ParameterControls.tsx`: the Shape sliders and Regrow button.
+- `src/export/encodeWav.ts`: 16-bit PCM WAV encoding and export file names.
+- `src/export/renderScore.ts`: offline render of the score through the playback graph.
+- `src/export/useExport.ts`: render-to-download lifecycle for the UI.
 - `src/styles.css`: Tailwind import and global styles.
 - `src/tree/generateTree.ts`: seeded tree generation, parent links, spatial bounds,
   and depth levels sorted left to right.
@@ -114,7 +118,13 @@ The largest supported tree takes roughly 300 ms to build, and the panel notes th
 branch count so that cost is visible before it happens. Volume lives outside the
 player session, so it survives a regrow.
 
-Next: add a working audio export, then presets and zen mode.
+Download re-renders the score offline through the same graph as playback, so the
+file matches what you hear. It is not faster than real time with this effects
+chain: a 62-second piece measured about 47 seconds at 44.1 kHz in Chromium, with
+the reverb roughly doubling the cost. The button stays disabled with a status
+message until the file is ready.
+
+Next: add presets and zen mode.
 
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 

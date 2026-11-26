@@ -9,5 +9,6 @@ This reference explains the numbered steps mentioned in the prompt log.
 4. **Initial playback:** Add basic playback controls and tune the melody, chords, and drone.
 5. **Tree visuals:** Draw the tree on canvas and bloom each branch as its note plays.
 6. **Shape controls:** Adjust depth, branching, spread, and tempo, and regrow with a new seed.
+7. **Audio export:** Download the full soundscape as a .wav file.
 
-After these steps: audio export, presets, zen mode, and accessibility polish.
+After these steps: presets, zen mode, and accessibility polish.

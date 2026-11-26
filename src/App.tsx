@@ -8,6 +8,7 @@ import {
   treeParametersFor,
   type SoundParameters,
 } from './controls/soundParameters'
+import { useExport } from './export/useExport'
 import { generateScore } from './music/generateScore'
 import { generateTree } from './tree/generateTree'
 import { TreeCanvas } from './visuals/TreeCanvas'
@@ -36,6 +37,7 @@ export default function App() {
   const score = useMemo(() => generateScore(tree, musicParametersFor(applied)), [tree, applied])
   const geometry = useMemo(() => buildTreeGeometry(tree, score), [tree, score])
   const playback = useSoundscape(score)
+  const exporting = useExport({ score, seed: applied.seed, volume: playback.volume })
   const busy = playback.status === 'loading' || playback.status === 'pausing'
   const playing = playback.status === 'playing'
   const active = playing || busy || playback.status === 'paused'
@@ -90,7 +92,7 @@ export default function App() {
               <span>{formatTime(playback.positionSeconds)}</span>
               <span>{formatTime(score.durationSeconds)}</span>
             </div>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={playing ? playback.pause : playback.play}
@@ -107,7 +109,21 @@ export default function App() {
               >
                 Stop
               </button>
+              <button
+                type="button"
+                onClick={exporting.download}
+                disabled={exporting.status === 'rendering'}
+                className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+              >
+                {exporting.status === 'rendering' ? 'Rendering…' : 'Download'}
+              </button>
             </div>
+            <p aria-live="polite" className="mt-3 text-xs text-stone-400">
+              {exporting.status === 'rendering'
+                ? `Rendering about ${Math.round(score.durationSeconds)} seconds of audio. This can take a minute with reverb.`
+                : 'Downloads a .wav file of this exact soundscape.'}
+            </p>
+            {exporting.error && <p role="alert" className="mt-2 text-sm text-rose-200">{exporting.error}</p>}
             <div className="mt-6">
               <label htmlFor="master-volume" className="flex justify-between text-sm text-stone-300">
                 <span>Volume</span>
