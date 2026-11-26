@@ -226,14 +226,16 @@ export default function App() {
       </a>
       <main
         id="main"
-        className={`mx-auto grid min-h-svh w-full max-w-7xl items-center px-6 ${
-          zen ? 'py-6' : 'gap-6 py-10 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:gap-12 lg:py-12'
+        className={`mx-auto grid min-h-svh w-full max-w-7xl px-6 ${
+          zen
+            ? 'py-6'
+            : 'gap-6 py-10 lg:h-svh lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start lg:gap-12 lg:overflow-hidden lg:py-0'
         }`}
       >
         <section
           aria-labelledby="welcome-title"
           hidden={zen}
-          className="order-2 w-full rounded-3xl border border-white/10 bg-[var(--panel)] p-8 shadow-2xl backdrop-blur-sm sm:p-10 lg:order-1"
+          className="order-2 w-full rounded-3xl border border-white/10 bg-[var(--panel)] p-8 shadow-2xl backdrop-blur-sm sm:p-10 lg:order-1 lg:my-10 lg:h-[calc(100svh-5rem)] lg:overflow-y-auto"
         >
           <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--accent)]">
             Recursive Soundscapes
@@ -420,8 +422,12 @@ export default function App() {
           )}
         </section>
 
-        <div className="order-1 flex w-full min-w-0 flex-col gap-4 lg:order-2">
-          <div className={zen ? 'h-[92svh]' : 'h-[40svh] min-h-56 lg:h-[52svh]'}>
+        <div
+          className={`order-1 flex w-full min-w-0 flex-col gap-4 lg:order-2 ${
+            zen ? '' : 'lg:h-[calc(100svh-5rem)] lg:py-10'
+          }`}
+        >
+          <div className={zen ? 'h-[92svh] w-full' : 'h-[40svh] min-h-56 lg:h-auto lg:min-h-0 lg:flex-1'}>
             <TreeCanvas
               geometry={geometry}
               getPositionSeconds={treePositionSeconds}
