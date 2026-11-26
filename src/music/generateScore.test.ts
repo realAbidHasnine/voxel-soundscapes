@@ -147,8 +147,20 @@ describe('generateScore', () => {
       timeSeconds: 40, durationSeconds: 16, midi: [48, 52, 55, 59, 62], fadeOutSeconds: 16,
     })
     expect(score.durationSeconds).toBe(56)
-    expect(score.drone).toEqual({ timeSeconds: 0, durationSeconds: 56, midi: 24, fadeOutSeconds: 16 })
+    expect(score.drone).toEqual({ timeSeconds: 0, durationSeconds: 56, midi: 36, fadeOutSeconds: 16 })
     expect(score.notes.every((note) => note.timeSeconds + note.durationSeconds <= score.durationSeconds)).toBe(true)
+  })
+
+  it('keeps the drone above sub-bass so small speakers can reproduce it', () => {
+    // Below roughly 50 Hz, phone and laptop speakers produce only rattle.
+    for (const scale of ['majorPentatonic', 'minorPentatonic'] as const) {
+      for (let root = 0; root < 12; root++) {
+        const drone = generateScore(generateTree({ maxDepth: 0 }), { root, scale }).drone
+        const hertz = 440 * 2 ** ((drone.midi - 69) / 12)
+        expect(hertz).toBeGreaterThanOrEqual(50)
+        expect(hertz).toBeLessThan(140)
+      }
+    }
   })
 
   it('transposes chords and drone and resolves minor scores to their minor tonic', () => {
@@ -159,7 +171,7 @@ describe('generateScore', () => {
     expect(d.drone.midi).toBe(c.drone.midi + 2)
     const minor = generateScore(tree, { root: 9, scale: 'minorPentatonic' })
     expect(minor.chords.at(-1)?.midi.map((midi) => midi % 12)).toEqual([9, 0, 4, 7, 11])
-    expect(minor.drone.midi).toBe(33)
+    expect(minor.drone.midi).toBe(45)
     expect(minor.durationSeconds).toBeCloseTo(24 * 60 / 70)
   })
 

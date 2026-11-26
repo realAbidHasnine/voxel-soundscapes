@@ -117,9 +117,18 @@ tempo preserves note choices and keeps humanization within ±15 ms.
 
 Playback starts only after a user action. Pads, FM Rhodes-style notes, triangle
 chimes with a quiet octave overtone, and a sine drone feed low-pass filtering,
-ping-pong delay, reverb, and a -3 dB limiter. Each melody voice retains its own
+ping-pong delay, reverb, and a limiter. Each melody voice retains its own
 pan and depth-based reverb send. The final fade sits after the effects so the
 entire soundscape reaches silence together.
+
+The master chain is ordered deliberately: a 40 Hz high-pass removes sub-bass that
+phone and laptop speakers cannot reproduce (it only adds rattle), a 5x makeup
+gain lifts the mix, and a limiter at -1.5 dB is the last safety net. Measured
+peaks sit near 0.27 with no clipping, roughly 15 dB above the earlier mix.
+
+The analyser that feeds the frequency graph taps the master as a dead-end sink
+rather than sitting inline before the destination, because iOS Safari silences a
+graph whose output reaches the speakers only through a plain `AnalyserNode`.
 
 Each playback session owns an audio context. Pause gently gates the output and
 suspends that context, preserving sustained notes and effect tails for Resume.

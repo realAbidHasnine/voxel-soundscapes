@@ -3,6 +3,17 @@ import type { MusicalScore, NoteEvent } from '../music/generateScore'
 
 const frequency = (midi: number) => 440 * 2 ** ((midi - 69) / 12)
 
+/**
+ * Makeup gain applied before the limiter. The voices were mixed so quietly that
+ * peaks reached about -24 dBFS, which reads as thin and buzzy on small speakers
+ * and disappears under any ambient noise. The limiter still guards the ceiling.
+ */
+const MASTER_MAKEUP = 5
+
+/** Cut the very bottom: phone and laptop speakers cannot reproduce it, and it
+ * only produces rattling intermodulation there. */
+const SUB_BASS_CUTOFF = 40
+
 /** Each session owns its graph. No nodes connect to Tone's global context. */
 export function createAudioGraph(context: Tone.BaseContext, volume: number) {
   const resources = new Set<{ dispose(): unknown }>()
@@ -12,18 +23,23 @@ export function createAudioGraph(context: Tone.BaseContext, volume: number) {
     return node
   }
 
-  const output = own(new Tone.Gain({ context, gain: volume }))
-  // A native analyser sits on the master path so visuals can read real spectrum
-  // data. It is transparent to the audio itself.
+  const output = own(new Tone.Gain({ context, gain: volume })).connect(context.destination)
+  // A native analyser taps the master signal for visuals. It stays a dead-end
+  // sink rather than sitting inline before destination: iOS Safari silences an
+  // output graph whose destination is reached only through a plain AnalyserNode.
   const analyser = context.rawContext.createAnalyser()
   analyser.fftSize = 512
   analyser.smoothingTimeConstant = 0.8
   output.connect(analyser)
-  analyser.connect(context.rawContext.destination)
   const frequencyData = new Float32Array(analyser.frequencyBinCount)
   const gate = own(new Tone.Gain({ context, gain: 0 })).connect(output)
   const fade = own(new Tone.Gain({ context, gain: 1 })).connect(gate)
-  const limiter = own(new Tone.Limiter({ context, threshold: -3 })).connect(fade)
+  // High-pass first, then makeup gain, then a limiter as the last safety net.
+  const rumble = own(new Tone.Filter({
+    context, frequency: SUB_BASS_CUTOFF, type: 'highpass', rolloff: -12,
+  })).connect(fade)
+  const makeup = own(new Tone.Gain({ context, gain: MASTER_MAKEUP })).connect(rumble)
+  const limiter = own(new Tone.Limiter({ context, threshold: -1.5 })).connect(makeup)
   const dry = own(new Tone.Gain({ context, gain: 0.55 })).connect(limiter)
   const wet = own(new Tone.Gain({ context, gain: 0.45 })).connect(limiter)
   const reverb = own(new Tone.Reverb({ context, decay: 8, wet: 1 })).connect(wet)

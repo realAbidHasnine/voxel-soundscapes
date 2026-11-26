@@ -75,11 +75,14 @@ export class AlbumPlayer {
     const context = new AudioContext({ latencyHint: 'playback' })
     const gain = context.createGain()
     gain.gain.value = this.volume
+    // Connect straight to the output, then tap an analyser off the side. iOS
+    // Safari silences a graph whose destination is reached only through an
+    // AnalyserNode, so the analyser must not sit inline.
+    gain.connect(context.destination)
     const analyser = context.createAnalyser()
     analyser.fftSize = 512
     analyser.smoothingTimeConstant = 0.8
     gain.connect(analyser)
-    analyser.connect(context.destination)
     this.context = context
     this.gain = gain
     this.analyser = analyser

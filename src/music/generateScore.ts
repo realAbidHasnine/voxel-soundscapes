@@ -208,7 +208,9 @@ export function generateScore(
     drone: {
       timeSeconds: 0,
       durationSeconds,
-      midi: 24 + root,
+      // C2 (65 Hz), not C1: anything below ~50 Hz is inaudible on phone and
+      // laptop speakers, where it only adds distortion and buzz.
+      midi: 36 + root,
       fadeOutSeconds: tailSeconds,
     },
     cues,
