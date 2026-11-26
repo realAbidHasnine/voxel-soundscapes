@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { ALBUM_TRACKS } from './audio/albumLibrary'
-import type { AlbumTrack } from './audio/albumTracks'
 import { useAlbum } from './audio/useAlbum'
+import { useAlbumTracks } from './audio/useAlbumTracks'
+import type { AlbumTrack } from './audio/albumTracks'
 import { useSoundscape } from './audio/useSoundscape'
 import { AlbumPicker } from './controls/AlbumPicker'
 import { ParameterControls } from './controls/ParameterControls'
@@ -48,11 +48,12 @@ export default function App() {
   const [zen, setZen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [mode, setMode] = useState<SourceMode>('generated')
-  const [trackId, setTrackId] = useState<string | null>(ALBUM_TRACKS[0]?.id ?? null)
+  const albumTracks = useAlbumTracks()
+  const [trackId, setTrackId] = useState<string | null>(null)
   const preset = presetById(settings.presetId)
   const { palette } = preset
   const { parameters } = settings
-  const albumAvailable = ALBUM_TRACKS.length > 0
+  const albumAvailable = albumTracks.length > 0
 
   const applySettings = (next: SharedState) => setSettings(next)
 
@@ -84,7 +85,18 @@ export default function App() {
   const exporting = useExport({ score, seed: applied.parameters.seed, volume: playback.volume })
 
   const albumMode = mode === 'album'
-  const track: AlbumTrack | null = ALBUM_TRACKS.find((item) => item.id === trackId) ?? null
+  const track: AlbumTrack | null = albumTracks.find((item) => item.id === trackId) ?? null
+
+  // Pick the first track once the list arrives, or when the current one vanishes.
+  useEffect(() => {
+    if (albumTracks.length === 0) {
+      if (trackId !== null) setTrackId(null)
+      return
+    }
+    if (!albumTracks.some((item) => item.id === trackId)) {
+      setTrackId(albumTracks[0].id)
+    }
+  }, [albumTracks, trackId])
   const sourceStatus = albumMode ? album.status : playback.status
   const playing = sourceStatus === 'playing'
   const busy = sourceStatus === 'loading' || sourceStatus === 'pausing'
@@ -386,7 +398,7 @@ export default function App() {
             <div className="mt-6 border-t border-white/10 pt-6">
               <h2 className="mb-3 text-sm font-medium text-stone-200">Album</h2>
               <AlbumPicker
-                tracks={ALBUM_TRACKS}
+                tracks={albumTracks}
                 activeId={album.trackId}
                 onSelect={selectTrack}
                 disabled={busy}

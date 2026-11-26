@@ -1,7 +1,7 @@
 import type { AlbumTrack } from '../audio/albumTracks'
 
 interface AlbumPickerProps {
-  readonly tracks: readonly AlbumTrack[]
+  readonly tracks: readonly (AlbumTrack & { readonly license?: string })[]
   readonly activeId: string | null
   readonly onSelect: (track: AlbumTrack) => void
   readonly disabled: boolean
@@ -28,6 +28,7 @@ export function AlbumPicker({ tracks, activeId, onSelect, disabled }: AlbumPicke
               aria-pressed={active}
               disabled={disabled}
               onClick={() => onSelect(track)}
+              title={track.license ? `License: ${track.license}` : undefined}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 active
                   ? 'bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] text-stone-100'
@@ -38,6 +39,11 @@ export function AlbumPicker({ tracks, activeId, onSelect, disabled }: AlbumPicke
                 {track.trackNumber ?? index + 1}
               </span>
               <span className="truncate">{track.title}</span>
+              {track.license && (
+                <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-stone-500">
+                  {track.license}
+                </span>
+              )}
             </button>
           </li>
         )

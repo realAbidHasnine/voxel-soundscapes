@@ -190,6 +190,29 @@ Album audio is copyrighted in most cases, so it stays out of git and out of the
 build of a fresh clone; with an empty folder the Album source simply does not
 appear.
 
+## Album on a deployed site
+
+`beta-album/` is local only, so a deployment needs tracks that live in the repo.
+Put those in `public/album/` instead and regenerate the manifest:
+
+```sh
+npm run album:manifest
+```
+
+That scans `public/album/` and writes `manifest.json`, which the app fetches at
+runtime. Each entry may carry `title`, `license`, and `credit`; the license is
+shown in the picker. File names containing `/`, `\`, or `..` are rejected, since
+the manifest is a static file that is not trusted.
+
+Only publish audio you have the right to redistribute. The Minecraft soundtrack
+is copyrighted and must not be added here.
+
+## Deploying to Vercel
+
+`vercel.json` sets the Vite framework, the build command, and the `dist` output
+with an SPA rewrite. Either connect the repository in the Vercel dashboard or run
+`vercel` with the CLI; no extra environment variables are needed.
+
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 
 ## AI usage
