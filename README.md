@@ -193,16 +193,18 @@ appear.
 ## Album on a deployed site
 
 `beta-album/` is local only, so a deployment needs tracks that live in the repo.
-Put those in `public/album/` instead and regenerate the manifest:
+Put those in `public/album/` and commit them. `npm run build` regenerates
+`manifest.json` from that folder automatically, so a Vercel deploy always matches
+the committed files; `npm run album:manifest` does the same by hand for local dev.
 
-```sh
-npm run album:manifest
-```
+To add a selection:
 
-That scans `public/album/` and writes `manifest.json`, which the app fetches at
-runtime. Each entry may carry `title`, `license`, and `credit`; the license is
-shown in the picker. File names containing `/`, `\`, or `..` are rejected, since
-the manifest is a static file that is not trusted.
+1. Copy the audio into `public/album/` and commit it.
+2. Optionally add `title`, `license`, and `credit` to its `manifest.json` entry.
+
+Hand-written details survive regeneration, and entries for deleted files are
+dropped. File names containing `/`, `\`, or `..` are rejected, since the manifest
+is a static file that is not trusted.
 
 Only publish audio you have the right to redistribute. The Minecraft soundtrack
 is copyrighted and must not be added here.

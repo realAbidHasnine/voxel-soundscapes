@@ -10,8 +10,15 @@ and stays local for your own listening.
 ## Add a track
 
 1. Copy the audio file into this folder.
-2. Run `npm run album:manifest` to regenerate `manifest.json`.
-3. Optionally add `title`, `license`, and `credit` for each entry:
+2. Commit it, along with an updated `manifest.json`.
+
+The manifest is regenerated automatically by `npm run build`, so a Vercel deploy
+always matches the files in this folder. Run `npm run album:manifest` yourself if
+you want to see the change immediately in `npm run dev`. Existing `title`,
+`license`, and `credit` values are preserved across regeneration, and entries
+whose file was deleted are dropped.
+
+To annotate a track, add its details to `manifest.json` after the first run:
 
 ```json
 {
