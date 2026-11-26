@@ -10,5 +10,6 @@ This reference explains the numbered steps mentioned in the prompt log.
 5. **Tree visuals:** Draw the tree on canvas and bloom each branch as its note plays.
 6. **Shape controls:** Adjust depth, branching, spread, and tempo, and regrow with a new seed.
 7. **Audio export:** Download the full soundscape as a .wav file.
+8. **Presets and zen:** Three named soundscapes, plus a distraction-free view.
 
-After these steps: presets, zen mode, and accessibility polish.
+After these steps: accessibility polish and shareable links.

@@ -1,21 +1,24 @@
 import type { TreeGeometry } from './treeGeometry'
+import { FOREST_PALETTE, type TreePalette } from './treePalette'
 
 const MAX_DRAWN_BRANCHES = 24_000
 const ALPHA_STEPS = 4
 const FADE_SECONDS = 0.45
 const GHOST_ALPHA = 0.13
 
-/** Cool trunk to a pale mint tip. */
-function branchColor(depthRatio: number) {
-  const hue = 166 - depthRatio * 24
-  const lightness = 38 + depthRatio * 30
-  return `hsl(${hue.toFixed(1)} 52% ${lightness.toFixed(1)}%)`
+/** Trunk to tip, following the preset's hue and lightness ramp. */
+function branchColor(depthRatio: number, palette: TreePalette) {
+  const hue = palette.hueStart + (palette.hueEnd - palette.hueStart) * depthRatio
+  const lightness = palette.lightnessStart
+    + (palette.lightnessEnd - palette.lightnessStart) * depthRatio
+  return `hsl(${hue.toFixed(1)} ${palette.saturation}% ${lightness.toFixed(1)}%)`
 }
 
 export interface TreeFrameOptions {
   readonly width: number
   readonly height: number
   readonly elapsedSeconds: number
+  readonly palette?: TreePalette
 }
 
 /** Flattened x1, y1, x2, y2 per branch, grouped so one stroke covers many branches. */
@@ -29,7 +32,7 @@ type Bucket = number[]
 export function drawTreeFrame(
   ctx: CanvasRenderingContext2D,
   geometry: TreeGeometry,
-  { width, height, elapsedSeconds }: TreeFrameOptions,
+  { width, height, elapsedSeconds, palette = FOREST_PALETTE }: TreeFrameOptions,
 ): number {
   ctx.clearRect(0, 0, width, height)
   if (width <= 0 || height <= 0 || geometry.nodeCount === 0) return 0
@@ -96,13 +99,13 @@ export function drawTreeFrame(
   const lineWidthFor = (depthRatio: number) => Math.max(0.6, (1.9 - depthRatio * 1.1) * (size / 900))
 
   ctx.globalAlpha = GHOST_ALPHA
-  ctx.strokeStyle = branchColor(0.75)
+  ctx.strokeStyle = branchColor(0.75, palette)
   ctx.lineWidth = lineWidthFor(0.75)
   trace(ghost)
 
   for (let depth = 0; depth <= geometry.maxDepth; depth++) {
     const depthRatio = depth / maxDepth
-    ctx.strokeStyle = branchColor(depthRatio)
+    ctx.strokeStyle = branchColor(depthRatio, palette)
     ctx.lineWidth = lineWidthFor(depthRatio)
     // Fainter steps draw first so recently bloomed branches sit on top.
     for (let alphaStep = 1; alphaStep <= ALPHA_STEPS; alphaStep++) {

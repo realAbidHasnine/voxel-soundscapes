@@ -3,7 +3,7 @@ import { DEFAULT_MUSIC_PARAMETERS } from '../music/generateScore'
 import type { TreeParameters } from '../tree/generateTree'
 import { DEFAULT_TREE_PARAMETERS } from '../tree/generateTree'
 
-/** Everything the interface can change, kept in display units. */
+/** Everything that determines the sound, kept in display units. */
 export interface SoundParameters {
   readonly seed: number
   readonly maxDepth: number
@@ -11,6 +11,9 @@ export interface SoundParameters {
   /** Fan angle in degrees; the tree works in radians. */
   readonly spreadDegrees: number
   readonly tempo: number
+  /** Pitch class: C = 0, C# = 1, … */
+  readonly root: number
+  readonly scale: 'majorPentatonic' | 'minorPentatonic'
 }
 
 export const SOUND_LIMITS = {
@@ -26,6 +29,8 @@ export const DEFAULT_SOUND_PARAMETERS: SoundParameters = Object.freeze({
   branching: 2,
   spreadDegrees: 30,
   tempo: DEFAULT_MUSIC_PARAMETERS.tempo,
+  root: DEFAULT_MUSIC_PARAMETERS.root,
+  scale: DEFAULT_MUSIC_PARAMETERS.scale,
 })
 
 /** Above this, generating and animating the tree can feel heavy. */
@@ -44,9 +49,17 @@ export function treeParametersFor(parameters: SoundParameters): TreeParameters {
 export function musicParametersFor(parameters: SoundParameters): MusicParameters {
   return {
     tempo: parameters.tempo,
-    root: DEFAULT_MUSIC_PARAMETERS.root,
-    scale: DEFAULT_MUSIC_PARAMETERS.scale,
+    root: parameters.root,
+    scale: parameters.scale,
   }
+}
+
+/** Note names for the two supported pentatonic roots, for display. */
+export const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'] as const
+
+export function scaleLabel(parameters: Pick<SoundParameters, 'root' | 'scale'>): string {
+  const mode = parameters.scale === 'majorPentatonic' ? 'major' : 'minor'
+  return `${NOTE_NAMES[parameters.root]} ${mode}`
 }
 
 /** Total branches for a full tree: one root plus every branching level. */

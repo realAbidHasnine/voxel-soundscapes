@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { drawTreeFrame } from './drawTreeFrame'
 import type { TreeGeometry } from './treeGeometry'
+import type { TreePalette } from './treePalette'
 
 interface TreeCanvasProps {
   readonly geometry: TreeGeometry
@@ -9,9 +10,10 @@ interface TreeCanvasProps {
   /** False before playback starts and after it stops, which freezes the frame. */
   readonly animating: boolean
   readonly label: string
+  readonly palette: TreePalette
 }
 
-export function TreeCanvas({ geometry, getPositionSeconds, animating, label }: TreeCanvasProps) {
+export function TreeCanvas({ geometry, getPositionSeconds, animating, label, palette }: TreeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
   const sizeRef = useRef({ width: 0, height: 0 })
@@ -44,7 +46,7 @@ export function TreeCanvas({ geometry, getPositionSeconds, animating, label }: T
     let frame = 0
     const render = () => {
       const { width, height } = sizeRef.current
-      drawTreeFrame(ctx, geometry, { width, height, elapsedSeconds: getPositionSeconds() })
+      drawTreeFrame(ctx, geometry, { width, height, elapsedSeconds: getPositionSeconds(), palette })
       frame = requestAnimationFrame(render)
     }
     // One static frame is enough while playback is idle or paused.
@@ -54,7 +56,7 @@ export function TreeCanvas({ geometry, getPositionSeconds, animating, label }: T
     }
     render()
     return () => cancelAnimationFrame(frame)
-  }, [geometry, getPositionSeconds, animating])
+  }, [geometry, getPositionSeconds, animating, palette])
 
   return (
     <canvas

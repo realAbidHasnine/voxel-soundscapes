@@ -47,13 +47,17 @@ The deterministic recursive tree and score generators drive Tone.js playback and
 synchronized canvas. The screen shows the tree beside the controls; each branch
 blooms as its level plays. Controls provide Play/Pause/Resume, Stop, volume,
 elapsed time, and playback progress, plus a Shape panel for max depth, branching,
-spread, and tempo with a Regrow button for a new seed. Download renders the
-current soundscape to a 16-bit PCM `.wav`. Audio presets and ambient loops are
-future work.
+spread, and tempo with a Regrow button for a new seed. Three presets — Forest
+Canopy, Midnight Rain, and Cherry Blossom — change the scale, tempo, tree shape,
+and color palette together. Zen mode hides the interface so only the tree remains.
+Download renders the current soundscape to a 16-bit PCM `.wav`.
 
 - `src/App.tsx`: accessible playback screen with the tree beside the controls.
 - `src/controls/soundParameters.ts`: display units to generator parameters, limits, and seed rotation.
 - `src/controls/ParameterControls.tsx`: the Shape sliders and Regrow button.
+- `src/controls/presets.ts`: the three presets and their palettes.
+- `src/controls/PresetPicker.tsx`: preset buttons with the active state.
+- `src/visuals/treePalette.ts`: palette shape and the default Forest colors.
 - `src/export/encodeWav.ts`: 16-bit PCM WAV encoding and export file names.
 - `src/export/renderScore.ts`: offline render of the score through the playback graph.
 - `src/export/useExport.ts`: render-to-download lifecycle for the UI.
@@ -124,7 +128,12 @@ chain: a 62-second piece measured about 47 seconds at 44.1 kHz in Chromium, with
 the reverb roughly doubling the cost. The button stays disabled with a status
 message until the file is ready.
 
-Next: add presets and zen mode.
+Each preset supplies both its musical settings and a color palette, which is
+applied through CSS custom properties so labels, sliders, progress, and the tree
+all shift together. Selecting a preset replaces the shape sliders with that
+preset's values.
+
+Next: accessibility polish and shareable URLs.
 
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 

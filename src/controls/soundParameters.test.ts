@@ -7,7 +7,9 @@ import {
   SOUND_LIMITS,
   branchCount,
   musicParametersFor,
+  NOTE_NAMES,
   randomSeed,
+  scaleLabel,
   treeParametersFor,
   type SoundParameters,
 } from './soundParameters'
@@ -16,13 +18,23 @@ describe('soundParameters', () => {
   it('maps display units onto generator parameters', () => {
     const parameters: SoundParameters = {
       seed: 42, maxDepth: 7, branching: 3, spreadDegrees: 45, tempo: 65,
+      root: 2, scale: 'minorPentatonic',
     }
     expect(treeParametersFor(parameters)).toEqual({
       seed: 42, maxDepth: 7, branching: 3, spread: Math.PI / 4, ratio: 0.7,
     })
     expect(musicParametersFor(parameters)).toEqual({
-      tempo: 65, root: 0, scale: 'majorPentatonic',
+      tempo: 65, root: 2, scale: 'minorPentatonic',
     })
+  })
+
+  it('labels the scale from the root and mode', () => {
+    expect(scaleLabel({ root: 0, scale: 'majorPentatonic' })).toBe('C major')
+    expect(scaleLabel({ root: 9, scale: 'minorPentatonic' })).toBe('A minor')
+    expect(scaleLabel({ root: 2, scale: 'majorPentatonic' })).toBe('D major')
+    for (let root = 0; root < 12; root++) {
+      expect(NOTE_NAMES[root]).toBeTruthy()
+    }
   })
 
   it('produces parameters the generators accept at every limit', () => {
@@ -31,7 +43,10 @@ describe('soundParameters', () => {
       for (const branching of [SOUND_LIMITS.branching.min, SOUND_LIMITS.branching.max]) {
         for (const spreadDegrees of [SOUND_LIMITS.spreadDegrees.min, SOUND_LIMITS.spreadDegrees.max]) {
           for (const tempo of [SOUND_LIMITS.tempo.min, SOUND_LIMITS.tempo.max]) {
-            corners.push({ seed: 7, maxDepth, branching, spreadDegrees, tempo })
+            corners.push({
+              seed: 7, maxDepth, branching, spreadDegrees, tempo,
+              root: 0, scale: 'majorPentatonic',
+            })
           }
         }
       }

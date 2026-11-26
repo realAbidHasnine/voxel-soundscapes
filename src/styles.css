@@ -9,40 +9,55 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Presets override these inline; these are the Forest Canopy defaults. */
+  --accent: #a7f3d0;
+  --page-glow: #203c30;
+  --page-background: #101c19;
+  --panel: #16281f;
+
+  transition: background-color 400ms ease;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: radial-gradient(ellipse at top, #203c30 0%, #101c19 65%);
+  /* The app root owns the preset gradient; this covers the area beyond it. */
+  background: #0b1512;
 }
 
 ::selection {
-  color: #101c19;
-  background: #a7f3d0;
+  color: var(--page-background);
+  background: var(--accent);
 }
 
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid #a7f3d0;
+:focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 5px;
 }
 
 progress {
   appearance: none;
   border: 0;
-  background: #33433b;
-  color: #a7f3d0;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
 }
 
 progress::-webkit-progress-bar {
-  background: #33433b;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 progress::-webkit-progress-value {
-  background: #a7f3d0;
+  background: var(--accent);
 }
 
 progress::-moz-progress-bar {
-  background: #a7f3d0;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  body {
+    transition: none;
+  }
 }

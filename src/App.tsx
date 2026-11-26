@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useSoundscape } from './audio/useSoundscape'
 import { ParameterControls } from './controls/ParameterControls'
+import { PresetPicker } from './controls/PresetPicker'
+import { DEFAULT_PRESET, presetById, type Preset, type PresetId } from './controls/presets'
 import {
   DEFAULT_SOUND_PARAMETERS,
   musicParametersFor,
   randomSeed,
+  scaleLabel,
   treeParametersFor,
   type SoundParameters,
 } from './controls/soundParameters'
@@ -23,14 +27,28 @@ function formatTime(seconds: number) {
 }
 
 export default function App() {
+  const [presetId, setPresetId] = useState<PresetId>(DEFAULT_PRESET.id)
   const [parameters, setParameters] = useState<SoundParameters>(DEFAULT_SOUND_PARAMETERS)
   const [applied, setApplied] = useState<SoundParameters>(parameters)
+  const [zen, setZen] = useState(false)
+  const preset = presetById(presetId)
+  const { palette } = preset
 
   useEffect(() => {
     if (applied === parameters) return
     const timer = setTimeout(() => setApplied(parameters), APPLY_DELAY_MS)
     return () => clearTimeout(timer)
   }, [parameters, applied])
+
+  // Escape leaves zen mode, matching the visible exit button.
+  useEffect(() => {
+    if (!zen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setZen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zen])
 
   const pending = applied !== parameters
   const tree = useMemo(() => generateTree(treeParametersFor(applied)), [applied])
@@ -54,14 +72,34 @@ export default function App() {
     : playback.status === 'error' ? 'Playback needs your attention.'
     : 'Ready when you are.'
 
+  const selectPreset = (next: Preset) => {
+    setPresetId(next.id)
+    setParameters(next.parameters)
+  }
+
+  const theme = {
+    '--accent': palette.accent,
+    '--page-glow': palette.glow,
+    '--page-background': palette.background,
+    '--panel': palette.panel,
+  } as CSSProperties
+
   return (
-    <div className="relative min-h-svh">
-      <main className="mx-auto grid min-h-svh w-full max-w-7xl items-center gap-6 px-6 py-10 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:gap-12 lg:py-12">
+    <div
+      className="relative min-h-svh bg-[radial-gradient(ellipse_at_top,var(--page-glow)_0%,var(--page-background)_65%)] transition-colors duration-500"
+      style={theme}
+    >
+      <main
+        className={`mx-auto grid min-h-svh w-full max-w-7xl items-center px-6 ${
+          zen ? 'py-6' : 'gap-6 py-10 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:gap-12 lg:py-12'
+        }`}
+      >
         <section
           aria-labelledby="welcome-title"
-          className="order-2 w-full rounded-3xl border border-white/10 bg-emerald-950/60 p-8 shadow-2xl backdrop-blur-sm sm:p-10 lg:order-1"
+          hidden={zen}
+          className="order-2 w-full rounded-3xl border border-white/10 bg-[var(--panel)] p-8 shadow-2xl backdrop-blur-sm sm:p-10 lg:order-1"
         >
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-emerald-200">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--accent)]">
             Recursive Soundscapes
           </p>
           <h1
@@ -78,8 +116,8 @@ export default function App() {
           </p>
           <div className="mt-8 border-t border-white/10 pt-6">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="text-emerald-200">Forest Canopy</span>
-              <span className="text-stone-300">C major · {applied.tempo} BPM</span>
+              <span className="text-[var(--accent)]">{preset.name}</span>
+              <span className="text-stone-300">{scaleLabel(applied)} · {applied.tempo} BPM</span>
             </div>
             <progress
               aria-label="Playback progress"
@@ -97,7 +135,7 @@ export default function App() {
                 type="button"
                 onClick={playing ? playback.pause : playback.play}
                 disabled={busy}
-                className="min-h-12 min-w-32 rounded-full bg-emerald-200 px-6 py-3 font-medium text-emerald-950 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
+                className="min-h-12 min-w-32 rounded-full bg-[var(--accent)] px-6 py-3 font-medium text-emerald-950 disabled:cursor-wait disabled:opacity-60"
               >
                 {buttonLabel}
               </button>
@@ -116,6 +154,13 @@ export default function App() {
                 className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
               >
                 {exporting.status === 'rendering' ? 'Rendering…' : 'Download'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setZen(true)}
+                className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10"
+              >
+                Zen
               </button>
             </div>
             <p aria-live="polite" className="mt-3 text-xs text-stone-400">
@@ -138,11 +183,15 @@ export default function App() {
                 value={Math.round(playback.volume * 100)}
                 onChange={(event) => playback.setVolume(Number(event.target.value) / 100)}
                 aria-valuetext={`${Math.round(playback.volume * 100)} percent`}
-                className="mt-1 min-h-11 w-full cursor-pointer accent-emerald-200"
+                className="mt-1 min-h-11 w-full cursor-pointer accent-[var(--accent)]"
               />
             </div>
             <p role="status" className="mt-4 text-sm text-stone-300">{statusText}</p>
             {playback.error && <p role="alert" className="mt-3 text-sm text-rose-200">{playback.error}</p>}
+          </div>
+          <div className="mt-6 border-t border-white/10 pt-6">
+            <h2 className="mb-3 text-sm font-medium text-stone-200">Preset</h2>
+            <PresetPicker activeId={presetId} onSelect={selectPreset} disabled={busy} />
           </div>
           <div className="mt-6 border-t border-white/10 pt-6">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
@@ -159,15 +208,27 @@ export default function App() {
             />
           </div>
         </section>
-        <div className="order-1 h-[46svh] min-h-64 w-full lg:order-2 lg:h-[78svh]">
+        <div className={`order-1 w-full ${zen ? 'h-[92svh]' : 'h-[46svh] min-h-64 lg:order-2 lg:h-[78svh]'}`}>
           <TreeCanvas
             geometry={geometry}
             getPositionSeconds={playback.getPositionSeconds}
             animating={playing}
+            palette={palette}
             label={`Fractal tree with ${tree.nodes.length} branches, blooming as the music plays.`}
           />
         </div>
       </main>
+      {zen && (
+        <div className="fixed inset-x-0 bottom-0 flex justify-center p-6">
+          <button
+            type="button"
+            onClick={() => setZen(false)}
+            className="min-h-11 rounded-full border border-white/20 bg-black/40 px-5 text-sm text-stone-200 backdrop-blur-sm hover:bg-black/60"
+          >
+            Leave zen mode
+          </button>
+        </div>
+      )}
     </div>
   )
 }

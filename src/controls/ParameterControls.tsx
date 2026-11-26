@@ -31,7 +31,7 @@ function Slider({ id, label, value, min, max, step, display, onChange, disabled,
     <div>
       <label htmlFor={id} className="flex justify-between gap-3 text-sm text-stone-300">
         <span>{label}</span>
-        <span className="tabular-nums text-emerald-200">{display}</span>
+        <span className="tabular-nums text-[var(--accent)]">{display}</span>
       </label>
       <input
         id={id}
@@ -44,7 +44,7 @@ function Slider({ id, label, value, min, max, step, display, onChange, disabled,
         onChange={(event) => onChange(Number(event.target.value))}
         aria-valuetext={display}
         aria-describedby={hint ? `${id}-hint` : undefined}
-        className="mt-1 min-h-11 w-full cursor-pointer accent-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-1 min-h-11 w-full cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
       />
       {hint && <p id={`${id}-hint`} className="text-xs text-stone-400">{hint}</p>}
     </div>
