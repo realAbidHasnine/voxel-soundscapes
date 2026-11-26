@@ -12,7 +12,7 @@ Turn a recursive function into a relaxing, interactive musical experience. The u
 4. A UI with parameter controls and audio playback
 5. Working audio export
 6. A polished, accessible, relaxing experience
-7. **AI rule:** the repo must contain the prompt chain and the agent's response to each prompt, or the project may be disqualified. See AI_USAGE.md.
+7. **AI rule:** the repo must contain the prompt chain and the agent's response to each prompt, or the project may be disqualified. See AI_Policy.md.
 
 ## Judging
 | Criterion | Weight |
@@ -27,7 +27,9 @@ Turn a recursive function into a relaxing, interactive musical experience. The u
 ## Decisions
 - **Algorithm:** a recursive fractal tree that grows breadth-first, one level at a time.
 - **Stack:** Vite + React + Tailwind + Tone.js + HTML5 canvas. Fully client-side, with **no backend** (not required). Ambient loops are static files in `public/` (sourced from Pixabay or itch.io, with licenses noted).
-- **Export:** `Tone.Recorder` producing .webm (required). Optionally, `Tone.Offline` rendering to .wav.
+- **Export:** `Tone.Offline` rendering to 16-bit PCM `.wav` (implemented). Chosen
+  over `Tone.Recorder`/`.webm` because it is lossless, repeatable, and needs no
+  real-time capture; the offline render still takes close to real time.
 
 ## Build Order
 1. Recursion and event list

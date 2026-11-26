@@ -3,17 +3,17 @@ import type { CSSProperties } from 'react'
 import { useSoundscape } from './audio/useSoundscape'
 import { ParameterControls } from './controls/ParameterControls'
 import { PresetPicker } from './controls/PresetPicker'
-import { DEFAULT_PRESET, presetById, type Preset, type PresetId } from './controls/presets'
+import { DEFAULT_PRESET, presetById, type Preset } from './controls/presets'
+import { encodeShareLink, readShareLink, type SharedState } from './controls/shareLink'
 import {
   DEFAULT_SOUND_PARAMETERS,
   musicParametersFor,
   randomSeed,
   scaleLabel,
   treeParametersFor,
-  type SoundParameters,
 } from './controls/soundParameters'
 import { useExport } from './export/useExport'
-import { generateScore } from './music/generateScore'
+import { depthAtSeconds, generateScore } from './music/generateScore'
 import { generateTree } from './tree/generateTree'
 import { TreeCanvas } from './visuals/TreeCanvas'
 import { buildTreeGeometry } from './visuals/treeGeometry'
@@ -26,19 +26,26 @@ function formatTime(seconds: number) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, '0')}`
 }
 
+/** A link shared from a previous session wins over the defaults. */
+const initial: SharedState = readShareLink(typeof window === 'undefined' ? { search: '' } : window.location)
+  ?? { presetId: DEFAULT_PRESET.id, parameters: DEFAULT_SOUND_PARAMETERS }
+
 export default function App() {
-  const [presetId, setPresetId] = useState<PresetId>(DEFAULT_PRESET.id)
-  const [parameters, setParameters] = useState<SoundParameters>(DEFAULT_SOUND_PARAMETERS)
-  const [applied, setApplied] = useState<SoundParameters>(parameters)
+  // Preset and parameters are one unit: a preset changes both, and the URL must
+  // never describe a preset with parameters that belong to another one.
+  const [settings, setSettings] = useState<SharedState>(initial)
+  const [applied, setApplied] = useState<SharedState>(settings)
   const [zen, setZen] = useState(false)
-  const preset = presetById(presetId)
+  const [copied, setCopied] = useState(false)
+  const preset = presetById(settings.presetId)
   const { palette } = preset
+  const { parameters } = settings
 
   useEffect(() => {
-    if (applied === parameters) return
-    const timer = setTimeout(() => setApplied(parameters), APPLY_DELAY_MS)
+    if (applied === settings) return
+    const timer = setTimeout(() => setApplied(settings), APPLY_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [parameters, applied])
+  }, [settings, applied])
 
   // Escape leaves zen mode, matching the visible exit button.
   useEffect(() => {
@@ -50,12 +57,15 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [zen])
 
-  const pending = applied !== parameters
-  const tree = useMemo(() => generateTree(treeParametersFor(applied)), [applied])
-  const score = useMemo(() => generateScore(tree, musicParametersFor(applied)), [tree, applied])
+  const pending = applied !== settings
+  const tree = useMemo(() => generateTree(treeParametersFor(applied.parameters)), [applied])
+  const score = useMemo(
+    () => generateScore(tree, musicParametersFor(applied.parameters)),
+    [tree, applied],
+  )
   const geometry = useMemo(() => buildTreeGeometry(tree, score), [tree, score])
   const playback = useSoundscape(score)
-  const exporting = useExport({ score, seed: applied.seed, volume: playback.volume })
+  const exporting = useExport({ score, seed: applied.parameters.seed, volume: playback.volume })
   const busy = playback.status === 'loading' || playback.status === 'pausing'
   const playing = playback.status === 'playing'
   const active = playing || busy || playback.status === 'paused'
@@ -72,9 +82,38 @@ export default function App() {
     : playback.status === 'error' ? 'Playback needs your attention.'
     : 'Ready when you are.'
 
+  // The level counter only makes sense once the piece is moving.
+  const depth = active ? depthAtSeconds(score, playback.positionSeconds) : null
+
   const selectPreset = (next: Preset) => {
-    setPresetId(next.id)
-    setParameters(next.parameters)
+    setSettings({ presetId: next.id, parameters: next.parameters })
+  }
+
+  // Keep the address bar in step with the applied soundscape, so copying the
+  // URL always shares exactly what is on screen.
+  useEffect(() => {
+    const query = encodeShareLink(applied)
+    const next = `${window.location.pathname}?${query}`
+    if (`${window.location.pathname}${window.location.search}` !== next) {
+      window.history.replaceState(null, '', next)
+    }
+  }, [applied])
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2500)
+    return () => clearTimeout(timer)
+  }, [copied])
+
+  const copyShareLink = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?${encodeShareLink(applied)}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+    } catch {
+      // Clipboard access can be blocked; the URL is already in the address bar.
+      setCopied(false)
+    }
   }
 
   const theme = {
@@ -89,7 +128,14 @@ export default function App() {
       className="relative min-h-svh bg-[radial-gradient(ellipse_at_top,var(--page-glow)_0%,var(--page-background)_65%)] transition-colors duration-500"
       style={theme}
     >
+      <a
+        href="#main"
+        className="sr-only rounded-full bg-[var(--accent)] px-5 py-3 font-medium text-emerald-950 focus:not-sr-only focus:absolute focus:left-6 focus:top-6 focus:z-50"
+      >
+        Skip to controls
+      </a>
       <main
+        id="main"
         className={`mx-auto grid min-h-svh w-full max-w-7xl items-center px-6 ${
           zen ? 'py-6' : 'gap-6 py-10 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:gap-12 lg:py-12'
         }`}
@@ -117,7 +163,10 @@ export default function App() {
           <div className="mt-8 border-t border-white/10 pt-6">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="text-[var(--accent)]">{preset.name}</span>
-              <span className="text-stone-300">{scaleLabel(applied)} · {applied.tempo} BPM</span>
+              <span className="text-stone-300">
+                {depth !== null && `Depth ${depth} of ${tree.parameters.maxDepth} · `}
+                {scaleLabel(applied.parameters)} · {applied.parameters.tempo} BPM
+              </span>
             </div>
             <progress
               aria-label="Playback progress"
@@ -162,6 +211,14 @@ export default function App() {
               >
                 Zen
               </button>
+              <button
+                type="button"
+                onClick={() => { void copyShareLink() }}
+                aria-live="polite"
+                className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10"
+              >
+                {copied ? 'Link copied' : 'Share'}
+              </button>
             </div>
             <p aria-live="polite" className="mt-3 text-xs text-stone-400">
               {exporting.status === 'rendering'
@@ -191,19 +248,25 @@ export default function App() {
           </div>
           <div className="mt-6 border-t border-white/10 pt-6">
             <h2 className="mb-3 text-sm font-medium text-stone-200">Preset</h2>
-            <PresetPicker activeId={presetId} onSelect={selectPreset} disabled={busy} />
+            <PresetPicker activeId={settings.presetId} onSelect={selectPreset} disabled={busy} />
+            <p className="sr-only" aria-live="polite">
+              {preset.name}. {preset.description}. {scaleLabel(applied.parameters)} at {applied.parameters.tempo} BPM.
+            </p>
           </div>
           <div className="mt-6 border-t border-white/10 pt-6">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-sm font-medium text-stone-200">Shape</h2>
               <span className="text-xs text-stone-400" aria-live="polite">
-                {pending ? 'Growing…' : `Seed ${applied.seed}`}
+                {pending ? 'Growing…' : `Seed ${applied.parameters.seed}`}
               </span>
             </div>
             <ParameterControls
               parameters={parameters}
-              onChange={setParameters}
-              onRegrow={() => setParameters((current) => ({ ...current, seed: randomSeed(current.seed) }))}
+              onChange={(next) => setSettings((current) => ({ ...current, parameters: next }))}
+              onRegrow={() => setSettings((current) => ({
+                ...current,
+                parameters: { ...current.parameters, seed: randomSeed(current.parameters.seed) },
+              }))}
               disabled={busy}
             />
           </div>

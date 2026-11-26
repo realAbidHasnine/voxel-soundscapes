@@ -1,7 +1,39 @@
 import { describe, expect, it } from 'vitest'
 import { generateTree } from '../tree/generateTree'
-import { generateScore } from './generateScore'
+import { depthAtSeconds, generateScore } from './generateScore'
 import type { MusicParameters } from './generateScore'
+
+describe('depthAtSeconds', () => {
+  const score = generateScore(generateTree({ maxDepth: 4 }), { tempo: 60 })
+  const levelSeconds = score.tailStartSeconds / (score.chords.length - 1)
+
+  it('reports the level that is currently playing', () => {
+    expect(depthAtSeconds(score, 0)).toBe(0)
+    expect(depthAtSeconds(score, levelSeconds * 0.5)).toBe(0)
+    expect(depthAtSeconds(score, levelSeconds)).toBe(1)
+    for (let depth = 0; depth < score.chords.length - 1; depth++) {
+      expect(depthAtSeconds(score, depth * levelSeconds + levelSeconds * 0.99)).toBe(depth)
+    }
+  })
+
+  it('returns null outside the levels', () => {
+    expect(depthAtSeconds(score, -1)).toBeNull()
+    expect(depthAtSeconds(score, score.tailStartSeconds)).toBeNull()
+    expect(depthAtSeconds(score, score.durationSeconds)).toBeNull()
+    // A root-only tree still has one level.
+    expect(depthAtSeconds(generateScore(generateTree({ maxDepth: 0 })), 0)).toBe(0)
+  })
+
+  it('matches the depth of the branch cues at that moment', () => {
+    const tree = generateTree({ maxDepth: 3 })
+    const treeScore = generateScore(tree, { tempo: 70 })
+    for (const cue of treeScore.cues) {
+      const reported = depthAtSeconds(treeScore, cue.timeSeconds)
+      // Cues at a level boundary belong to the level that just started.
+      expect(reported === cue.depth || reported === cue.depth - 1).toBe(true)
+    }
+  })
+})
 
 describe('generateScore', () => {
   it('replays the same score without mutating the tree or depending on other calls', () => {

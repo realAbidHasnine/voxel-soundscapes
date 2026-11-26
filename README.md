@@ -50,13 +50,16 @@ elapsed time, and playback progress, plus a Shape panel for max depth, branching
 spread, and tempo with a Regrow button for a new seed. Three presets — Forest
 Canopy, Midnight Rain, and Cherry Blossom — change the scale, tempo, tree shape,
 and color palette together. Zen mode hides the interface so only the tree remains.
-Download renders the current soundscape to a 16-bit PCM `.wav`.
+A level counter shows which depth is playing. Download renders the current
+soundscape to a 16-bit PCM `.wav`, and Share copies a link that restores the
+exact same soundscape.
 
 - `src/App.tsx`: accessible playback screen with the tree beside the controls.
 - `src/controls/soundParameters.ts`: display units to generator parameters, limits, and seed rotation.
 - `src/controls/ParameterControls.tsx`: the Shape sliders and Regrow button.
 - `src/controls/presets.ts`: the three presets and their palettes.
 - `src/controls/PresetPicker.tsx`: preset buttons with the active state.
+- `src/controls/shareLink.ts`: encode and safely decode the settings in the URL.
 - `src/visuals/treePalette.ts`: palette shape and the default Forest colors.
 - `src/export/encodeWav.ts`: 16-bit PCM WAV encoding and export file names.
 - `src/export/renderScore.ts`: offline render of the score through the playback graph.
@@ -73,7 +76,7 @@ Download renders the current soundscape to a 16-bit PCM `.wav`.
 - `src/visuals/drawTreeFrame.ts`: canvas renderer that blooms branches by audio time.
 - `src/visuals/TreeCanvas.tsx`: device-pixel-ratio canvas synced to the audio clock.
 - `vite.config.ts`: React and Tailwind Vite plugins.
-- `public/`: future static ambient loops; document sources and licenses when added.
+- `public/`: static assets only; currently empty.
 
 The tree generator accepts `seed`, `maxDepth`, `branching`, `spread` (radians),
 and `ratio` (branch length multiplier). It uses a unit trunk at the origin with
@@ -133,7 +136,19 @@ applied through CSS custom properties so labels, sliders, progress, and the tree
 all shift together. Selecting a preset replaces the shape sliders with that
 preset's values.
 
-Next: accessibility polish and shareable URLs.
+The address bar always describes the soundscape on screen, so copying it shares
+exactly what you hear. Links are validated on load: unknown presets, non-numeric
+values, and out-of-range numbers fall back to defaults or clamp to the nearest
+limit rather than failing. The renderer draws from the preset palette, and the
+level counter is derived from the score's own timing.
+
+The interface is keyboard reachable with a skip link, labelled controls, and live
+status regions. Zen mode hides the panel with `hidden`, so focus cannot land
+inside it, and Escape restores the full view.
+
+One item from the brief is deliberately not built: ambient wind and rain layers.
+They would need licensed recordings committed to `public/`, so the soundscape is
+generated entirely from the tree instead. There is no ambient-mix slider.
 
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 

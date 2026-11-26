@@ -81,6 +81,20 @@ function chronological(a: BranchCue, b: BranchCue) {
   return a.timeSeconds - b.timeSeconds || a.nodeId - b.nodeId
 }
 
+/**
+ * Which tree level is sounding at a given moment, or null outside the levels
+ * (before playback, or during the closing tail). Levels play in order, so the
+ * depth is a step function of time.
+ */
+export function depthAtSeconds(score: MusicalScore, seconds: number): number | null {
+  const levelCount = score.chords.length - 1 // The last chord is the tail.
+  if (levelCount <= 0) return null
+  if (seconds < 0 || seconds >= score.tailStartSeconds) return null
+  const levelSeconds = score.tailStartSeconds / levelCount
+  const depth = Math.floor(seconds / levelSeconds)
+  return depth >= 0 && depth < levelCount ? depth : null
+}
+
 /** A pure score builder for trees returned by generateTree; no audio is started. */
 export function generateScore(
   tree: RecursiveTree,

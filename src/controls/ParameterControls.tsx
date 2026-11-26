@@ -23,10 +23,9 @@ interface SliderProps {
   readonly display: string
   readonly onChange: (value: number) => void
   readonly disabled: boolean
-  readonly hint?: string
 }
 
-function Slider({ id, label, value, min, max, step, display, onChange, disabled, hint }: SliderProps) {
+function Slider({ id, label, value, min, max, step, display, onChange, disabled }: SliderProps) {
   return (
     <div>
       <label htmlFor={id} className="flex justify-between gap-3 text-sm text-stone-300">
@@ -43,10 +42,8 @@ function Slider({ id, label, value, min, max, step, display, onChange, disabled,
         disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
         aria-valuetext={display}
-        aria-describedby={hint ? `${id}-hint` : undefined}
         className="mt-1 min-h-11 w-full cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
       />
-      {hint && <p id={`${id}-hint`} className="text-xs text-stone-400">{hint}</p>}
     </div>
   )
 }
