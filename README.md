@@ -43,13 +43,16 @@ An existing Chromium executable can be selected with the
 
 ## Current scope
 
-The deterministic recursive tree and score generators now drive Tone.js playback.
-The screen provides Play/Pause/Resume, Stop, volume, elapsed time, and playback
-progress. The initial composition uses seed 1, C major pentatonic, and 70 BPM;
-press Play to hear it. Canvas rendering, parameter controls, ambient loops, and
-audio export are future work.
+The deterministic recursive tree and score generators drive Tone.js playback and a
+synchronized canvas. The screen shows the tree beside the controls; each branch
+blooms as its level plays. Controls provide Play/Pause/Resume, Stop, volume,
+elapsed time, and playback progress, plus a Shape panel for max depth, branching,
+spread, and tempo with a Regrow button for a new seed. Press Play to hear and see
+it. Audio export, presets, and ambient loops are future work.
 
-- `src/App.tsx`: accessible playback screen.
+- `src/App.tsx`: accessible playback screen with the tree beside the controls.
+- `src/controls/soundParameters.ts`: display units to generator parameters, limits, and seed rotation.
+- `src/controls/ParameterControls.tsx`: the Shape sliders and Regrow button.
 - `src/styles.css`: Tailwind import and global styles.
 - `src/tree/generateTree.ts`: seeded tree generation, parent links, spatial bounds,
   and depth levels sorted left to right.
@@ -58,6 +61,9 @@ audio export are future work.
 - `src/audio/createAudioGraph.ts`: synth voices, stereo routing, effects, and score scheduling.
 - `src/audio/SoundscapePlayer.ts`: playback lifecycle and session cleanup.
 - `src/audio/useSoundscape.ts`: React integration.
+- `src/visuals/treeGeometry.ts`: tree and score flattened into typed arrays for drawing.
+- `src/visuals/drawTreeFrame.ts`: canvas renderer that blooms branches by audio time.
+- `src/visuals/TreeCanvas.tsx`: device-pixel-ratio canvas synced to the audio clock.
 - `vite.config.ts`: React and Tailwind Vite plugins.
 - `public/`: future static ambient loops; document sources and licenses when added.
 
@@ -96,8 +102,19 @@ suspends that context, preserving sustained notes and effect tails for Resume.
 Stop, completion, and component unmount dispose the session's voices, schedules,
 and context. Volume changes are smoothed independently of the closing fade.
 
-Next: listen and refine the musical balance, then add the synchronized canvas
-visualization.
+The canvas animates from the audio clock rather than React state, so a branch
+stays in step with its note. Before playback it shows a faint silhouette of the
+whole tree; each frame then draws only the levels that have bloomed, grouped by
+depth and fade step so a frame stays a few dozen strokes. Trees larger than
+24,000 branches are sampled evenly for drawing, and drawing stops at the first
+cue that has not yet played because cue times are already sorted.
+
+Shape changes are debounced by about a fifth of a second before they regenerate.
+The largest supported tree takes roughly 300 ms to build, and the panel notes the
+branch count so that cost is visible before it happens. Volume lives outside the
+player session, so it survives a regrow.
+
+Next: add a working audio export, then presets and zen mode.
 
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 

@@ -23,7 +23,6 @@ const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout
 export class SoundscapePlayer {
   private session: Session | null = null
   private status: PlaybackStatus = 'idle'
-  private volume = 0.65
   private error: string | null = null
   private disposed = false
   private progressTimer: ReturnType<typeof setInterval> | undefined
@@ -31,18 +30,27 @@ export class SoundscapePlayer {
   constructor(
     private readonly score: MusicalScore,
     private readonly onChange: (snapshot: PlaybackSnapshot) => void,
+    private volume = 0.65,
   ) {}
 
   get snapshot(): PlaybackSnapshot {
-    const position = this.session && this.session.startTime !== Infinity
-      ? this.session.raw.currentTime - this.session.startTime
-      : this.status === 'ended' ? this.score.durationSeconds : 0
     return {
       status: this.status,
-      positionSeconds: Math.max(0, Math.min(this.score.durationSeconds, position)),
+      positionSeconds: this.currentPositionSeconds(),
       volume: this.volume,
       error: this.error,
     }
+  }
+
+  /**
+   * Read the audio clock directly. Visuals animate from this so they stay
+   * frame-accurate instead of following the throttled React snapshot.
+   */
+  currentPositionSeconds(): number {
+    const position = this.session && this.session.startTime !== Infinity
+      ? this.session.raw.currentTime - this.session.startTime
+      : this.status === 'ended' ? this.score.durationSeconds : 0
+    return Math.max(0, Math.min(this.score.durationSeconds, position))
   }
 
   private publish() {

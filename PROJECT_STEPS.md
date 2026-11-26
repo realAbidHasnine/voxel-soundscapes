@@ -7,6 +7,7 @@ This reference explains the numbered steps mentioned in the prompt log.
 2. **Recursive tree:** Generate a configurable tree that repeats consistently for the same seed.
 3. **Musical events:** Turn the tree’s branches into notes and musical timing.
 4. **Initial playback:** Add basic playback controls and tune the melody, chords, and drone.
+5. **Tree visuals:** Draw the tree on canvas and bloom each branch as its note plays.
+6. **Shape controls:** Adjust depth, branching, spread, and tempo, and regrow with a new seed.
 
-After these steps: synchronized tree visuals, parameter controls, audio export,
-presets, zen mode, and accessibility polish.
+After these steps: audio export, presets, zen mode, and accessibility polish.
