@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 
+// Rendering a 62-second score offline takes about 30 seconds, and longer when
+// the machine is busy, so these tests need more room than the default.
+test.describe.configure({ timeout: 180_000 })
+
 test('downloads a valid, audible WAV of the current soundscape', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))

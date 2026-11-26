@@ -12,7 +12,15 @@ export function createAudioGraph(context: Tone.BaseContext, volume: number) {
     return node
   }
 
-  const output = own(new Tone.Gain({ context, gain: volume })).connect(context.destination)
+  const output = own(new Tone.Gain({ context, gain: volume }))
+  // A native analyser sits on the master path so visuals can read real spectrum
+  // data. It is transparent to the audio itself.
+  const analyser = context.rawContext.createAnalyser()
+  analyser.fftSize = 512
+  analyser.smoothingTimeConstant = 0.8
+  output.connect(analyser)
+  analyser.connect(context.rawContext.destination)
+  const frequencyData = new Float32Array(analyser.frequencyBinCount)
   const gate = own(new Tone.Gain({ context, gain: 0 })).connect(output)
   const fade = own(new Tone.Gain({ context, gain: 1 })).connect(gate)
   const limiter = own(new Tone.Limiter({ context, threshold: -3 })).connect(fade)
@@ -85,6 +93,11 @@ export function createAudioGraph(context: Tone.BaseContext, volume: number) {
     ready: reverb.ready,
     output,
     gate,
+    /** Latest spectrum in decibels, reused between calls to avoid allocation. */
+    getFrequencyData() {
+      analyser.getFloatFrequencyData(frequencyData)
+      return frequencyData
+    },
     schedule(score: MusicalScore) {
       const transport = context.transport
       transport.bpm.value = score.parameters.tempo
@@ -112,6 +125,7 @@ export function createAudioGraph(context: Tone.BaseContext, volume: number) {
       cleanupTimers.clear()
       for (const resource of resources) resource.dispose()
       resources.clear()
+      analyser.disconnect()
     },
   }
 }

@@ -36,5 +36,8 @@ export function useSoundscape(score: MusicalScore) {
     },
     // Sampled per animation frame; reading state would lag behind the audio.
     getPositionSeconds: () => player.current?.currentPositionSeconds() ?? 0,
+    getFrequencyData: () => player.current?.currentFrequencyData() ?? EMPTY_SPECTRUM,
   }
 }
+
+const EMPTY_SPECTRUM = new Float32Array(256).fill(-Infinity)

@@ -9,3 +9,7 @@ playwright-report/
 !.env.example
 *.log
 .DS_Store
+
+# Local album audio stays out of the repo; the README documents the folder.
+beta-album/*
+!beta-album/README.md

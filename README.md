@@ -52,7 +52,11 @@ Canopy, Midnight Rain, and Cherry Blossom — change the scale, tempo, tree shap
 and color palette together. Zen mode hides the interface so only the tree remains.
 A level counter shows which depth is playing. Download renders the current
 soundscape to a 16-bit PCM `.wav`, and Share copies a link that restores the
-exact same soundscape.
+exact same soundscape. A frequency graph and a `grow()` trace sit under the tree;
+the trace lights the lines that are "executing" as the music plays.
+
+If any audio files are present in `beta-album/`, an Album source can play them
+instead of the generated score, and the trace follows the spectrum.
 
 - `src/App.tsx`: accessible playback screen with the tree beside the controls.
 - `src/controls/soundParameters.ts`: display units to generator parameters, limits, and seed rotation.
@@ -61,6 +65,15 @@ exact same soundscape.
 - `src/controls/PresetPicker.tsx`: preset buttons with the active state.
 - `src/controls/shareLink.ts`: encode and safely decode the settings in the URL.
 - `src/visuals/treePalette.ts`: palette shape and the default Forest colors.
+- `src/audio/albumTracks.ts`: track naming and ordering for the album folder.
+- `src/audio/albumLibrary.ts`: discovers `beta-album/` audio files.
+- `src/audio/AlbumPlayer.ts`: album playback with its own analyser.
+- `src/audio/useAlbum.ts`: React integration for album playback.
+- `src/controls/AlbumPicker.tsx`: the album track list.
+- `src/visuals/frequencyBars.ts`: FFT bars and band energy maths.
+- `src/visuals/FrequencyGraph.tsx`: live spectrum canvas.
+- `src/visuals/generatorSource.ts`: the `grow()` source and which lines are active.
+- `src/visuals/FunctionTrace.tsx`: the lighting code window.
 - `src/export/encodeWav.ts`: 16-bit PCM WAV encoding and export file names.
 - `src/export/renderScore.ts`: offline render of the score through the playback graph.
 - `src/export/useExport.ts`: render-to-download lifecycle for the UI.
@@ -148,7 +161,25 @@ inside it, and Escape restores the full view.
 
 One item from the brief is deliberately not built: ambient wind and rain layers.
 They would need licensed recordings committed to `public/`, so the soundscape is
-generated entirely from the tree instead. There is no ambient-mix slider.
+generated entirely from the tree instead. There is no ambient-mix slider. The
+optional album folder covers the "play a record over the visual" idea without
+shipping any audio.
+
+## Album mode
+
+Drop audio files into `beta-album/` (gitignored) and reload. The Album source
+appears in the controls; each file becomes a track ordered by its filename track
+number. Files are served through Vite's asset pipeline, so no manifest is needed.
+
+The album player runs its own Web Audio graph with an analyser on the master
+path. Pausing suspends the context, which freezes both the clock and the
+spectrum. While a track plays the tree blooms across the track's length, the
+frequency graph reads the real spectrum, and the trace lights lines from the
+bass, mid, and treble peaks instead of the recursion depth.
+
+Album audio is copyrighted in most cases, so it stays out of git and out of the
+build of a fresh clone; with an empty folder the Album source simply does not
+appear.
 
 See [Project steps](PROJECT_STEPS.md) for the numbered steps referenced in the prompt log.
 

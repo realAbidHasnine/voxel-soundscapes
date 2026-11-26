@@ -12,5 +12,6 @@ This reference explains the numbered steps mentioned in the prompt log.
 7. **Audio export:** Download the full soundscape as a .wav file.
 8. **Presets and zen:** Three named soundscapes, plus a distraction-free view.
 9. **Share and polish:** Shareable links, a level counter, and accessibility.
+10. **Album source and live trace:** Play local album files with a frequency graph and a lighting function trace.
 
 All steps are complete.

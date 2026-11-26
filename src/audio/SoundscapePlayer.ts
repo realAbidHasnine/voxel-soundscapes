@@ -20,6 +20,9 @@ interface Session {
 
 const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
 
+/** Silence in decibels, matching the analyser's own floor. */
+const SILENT_SPECTRUM = new Float32Array(256).fill(-Infinity)
+
 export class SoundscapePlayer {
   private session: Session | null = null
   private status: PlaybackStatus = 'idle'
@@ -51,6 +54,11 @@ export class SoundscapePlayer {
       ? this.session.raw.currentTime - this.session.startTime
       : this.status === 'ended' ? this.score.durationSeconds : 0
     return Math.max(0, Math.min(this.score.durationSeconds, position))
+  }
+
+  /** Spectrum in decibels, or silence when no session is running. */
+  currentFrequencyData(): ArrayLike<number> {
+    return this.session?.graph.getFrequencyData() ?? SILENT_SPECTRUM
   }
 
   private publish() {

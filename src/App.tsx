@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { ALBUM_TRACKS } from './audio/albumLibrary'
+import type { AlbumTrack } from './audio/albumTracks'
+import { useAlbum } from './audio/useAlbum'
 import { useSoundscape } from './audio/useSoundscape'
+import { AlbumPicker } from './controls/AlbumPicker'
 import { ParameterControls } from './controls/ParameterControls'
 import { PresetPicker } from './controls/PresetPicker'
 import { DEFAULT_PRESET, presetById, type Preset } from './controls/presets'
@@ -15,11 +19,17 @@ import {
 import { useExport } from './export/useExport'
 import { depthAtSeconds, generateScore } from './music/generateScore'
 import { generateTree } from './tree/generateTree'
+import { bandEnergy } from './visuals/frequencyBars'
+import { FrequencyGraph } from './visuals/FrequencyGraph'
+import { FunctionTrace } from './visuals/FunctionTrace'
+import type { TraceSignal } from './visuals/generatorSource'
 import { TreeCanvas } from './visuals/TreeCanvas'
 import { buildTreeGeometry } from './visuals/treeGeometry'
 
 /** Wait for a slider to settle before regenerating; the largest tree costs ~300ms. */
 const APPLY_DELAY_MS = 220
+
+type SourceMode = 'generated' | 'album'
 
 function formatTime(seconds: number) {
   const wholeSeconds = Math.floor(seconds)
@@ -37,9 +47,14 @@ export default function App() {
   const [applied, setApplied] = useState<SharedState>(settings)
   const [zen, setZen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [mode, setMode] = useState<SourceMode>('generated')
+  const [trackId, setTrackId] = useState<string | null>(ALBUM_TRACKS[0]?.id ?? null)
   const preset = presetById(settings.presetId)
   const { palette } = preset
   const { parameters } = settings
+  const albumAvailable = ALBUM_TRACKS.length > 0
+
+  const applySettings = (next: SharedState) => setSettings(next)
 
   useEffect(() => {
     if (applied === settings) return
@@ -65,28 +80,37 @@ export default function App() {
   )
   const geometry = useMemo(() => buildTreeGeometry(tree, score), [tree, score])
   const playback = useSoundscape(score)
+  const album = useAlbum()
   const exporting = useExport({ score, seed: applied.parameters.seed, volume: playback.volume })
-  const busy = playback.status === 'loading' || playback.status === 'pausing'
-  const playing = playback.status === 'playing'
-  const active = playing || busy || playback.status === 'paused'
-  const buttonLabel = playback.status === 'loading' ? 'Preparing…'
-    : playback.status === 'pausing' ? 'Pausing…'
+
+  const albumMode = mode === 'album'
+  const track: AlbumTrack | null = ALBUM_TRACKS.find((item) => item.id === trackId) ?? null
+  const sourceStatus = albumMode ? album.status : playback.status
+  const playing = sourceStatus === 'playing'
+  const busy = sourceStatus === 'loading' || sourceStatus === 'pausing'
+  const active = playing || busy || sourceStatus === 'paused'
+  const volume = albumMode ? album.volume : playback.volume
+  const positionSeconds = albumMode ? album.positionSeconds : playback.positionSeconds
+  const durationSeconds = albumMode ? album.durationSeconds : score.durationSeconds
+
+  const buttonLabel = sourceStatus === 'loading' ? 'Preparing…'
+    : sourceStatus === 'pausing' ? 'Pausing…'
     : playing ? 'Pause'
-    : playback.status === 'paused' ? 'Resume'
-    : playback.status === 'ended' ? 'Play again' : 'Play'
-  const statusText = playback.status === 'loading' ? 'Preparing your soundscape.'
-    : playback.status === 'pausing' ? 'Pausing your soundscape.'
-    : playback.status === 'paused' ? 'Paused. Take your time.'
-    : playback.status === 'ended' ? 'A quiet finish. Listen again whenever you like.'
-    : playing ? 'Let the branches unfold.'
-    : playback.status === 'error' ? 'Playback needs your attention.'
+    : sourceStatus === 'paused' ? 'Resume'
+    : sourceStatus === 'ended' ? 'Play again' : 'Play'
+  const statusText = sourceStatus === 'loading' ? (albumMode ? 'Loading the track.' : 'Preparing your soundscape.')
+    : sourceStatus === 'pausing' ? 'Pausing.'
+    : sourceStatus === 'paused' ? 'Paused. Take your time.'
+    : sourceStatus === 'ended' ? 'A quiet finish. Listen again whenever you like.'
+    : playing ? (albumMode ? 'Follow the music through the recursion.' : 'Let the branches unfold.')
+    : sourceStatus === 'error' ? 'Playback needs your attention.'
     : 'Ready when you are.'
 
   // The level counter only makes sense once the piece is moving.
-  const depth = active ? depthAtSeconds(score, playback.positionSeconds) : null
+  const depth = !albumMode && active ? depthAtSeconds(score, playback.positionSeconds) : null
 
   const selectPreset = (next: Preset) => {
-    setSettings({ presetId: next.id, parameters: next.parameters })
+    applySettings({ presetId: next.id, parameters: next.parameters })
   }
 
   // Keep the address bar in step with the applied soundscape, so copying the
@@ -115,6 +139,72 @@ export default function App() {
       setCopied(false)
     }
   }
+
+  const switchMode = (next: SourceMode) => {
+    if (next === mode) return
+    if (next === 'album') playback.stop()
+    else album.stop()
+    setMode(next)
+  }
+
+  const togglePlay = () => {
+    if (albumMode) {
+      if (album.status === 'playing') album.pause()
+      else if (track) album.play(track)
+      return
+    }
+    if (playback.status === 'playing') playback.pause()
+    else playback.play()
+  }
+
+  const stopSource = () => {
+    if (albumMode) album.stop()
+    else playback.stop()
+  }
+
+  const selectTrack = (next: AlbumTrack) => {
+    setTrackId(next.id)
+    album.play(next)
+  }
+
+  // In album mode the tree blooms across the whole track instead of the score.
+  // These callbacks are read every frame, so they stay stable across renders.
+  const albumRef = useRef(album)
+  const playbackRef = useRef(playback)
+  albumRef.current = album
+  playbackRef.current = playback
+
+  const treePositionSeconds = useCallback(() => {
+    if (!albumMode) return playbackRef.current.getPositionSeconds()
+    const total = albumRef.current.durationSeconds
+    if (total <= 0) return 0
+    return (albumRef.current.getPositionSeconds() / total) * score.durationSeconds
+  }, [albumMode, score.durationSeconds])
+
+  const frequencyData = useCallback(
+    () => (albumMode ? albumRef.current.getFrequencyData() : playbackRef.current.getFrequencyData()),
+    [albumMode],
+  )
+
+  const traceSignal = useCallback((): TraceSignal => {
+    if (albumMode) {
+      const energy = bandEnergy(albumRef.current.getFrequencyData())
+      return {
+        playing: albumRef.current.status === 'playing',
+        depth: null,
+        maxDepth: tree.parameters.maxDepth,
+        ...energy,
+      }
+    }
+    return {
+      playing: playbackRef.current.status === 'playing',
+      depth,
+      maxDepth: tree.parameters.maxDepth,
+      bass: 0,
+      mid: 0,
+      treble: 0,
+    }
+  }, [albumMode, depth, tree.parameters.maxDepth])
 
   const theme = {
     '--accent': palette.accent,
@@ -160,50 +250,80 @@ export default function App() {
             A branching melody, soft chords, and a little space to breathe.
             Press play and settle into the sound.
           </p>
+
+          {albumAvailable && (
+            <div className="mt-8 border-t border-white/10 pt-6">
+              <h2 className="mb-3 text-sm font-medium text-stone-200">Source</h2>
+              <div role="group" aria-label="Audio source" className="flex gap-2">
+                {([['generated', 'Generated'], ['album', 'Album']] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={mode === value}
+                    onClick={() => switchMode(value)}
+                    className={`min-h-11 rounded-full border px-4 text-sm ${
+                      mode === value
+                        ? 'border-transparent bg-[var(--accent)] font-medium text-emerald-950'
+                        : 'border-white/20 text-stone-200 hover:bg-white/10'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-8 border-t border-white/10 pt-6">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="text-[var(--accent)]">{preset.name}</span>
+              <span className="text-[var(--accent)]">
+                {albumMode ? (track?.title ?? 'Album') : preset.name}
+              </span>
               <span className="text-stone-300">
                 {depth !== null && `Depth ${depth} of ${tree.parameters.maxDepth} · `}
-                {scaleLabel(applied.parameters)} · {applied.parameters.tempo} BPM
+                {albumMode
+                  ? `${formatTime(positionSeconds)} / ${formatTime(durationSeconds)}`
+                  : `${scaleLabel(applied.parameters)} · ${applied.parameters.tempo} BPM`}
               </span>
             </div>
             <progress
               aria-label="Playback progress"
-              aria-valuetext={`${formatTime(playback.positionSeconds)} of ${formatTime(score.durationSeconds)}`}
-              value={playback.positionSeconds}
-              max={score.durationSeconds}
+              aria-valuetext={`${formatTime(positionSeconds)} of ${formatTime(durationSeconds)}`}
+              value={positionSeconds}
+              max={Math.max(durationSeconds, 0.001)}
               className="mt-5 block h-1.5 w-full overflow-hidden rounded-full"
             />
             <div className="mt-2 flex justify-between text-xs tabular-nums text-stone-300" aria-hidden="true">
-              <span>{formatTime(playback.positionSeconds)}</span>
-              <span>{formatTime(score.durationSeconds)}</span>
+              <span>{formatTime(positionSeconds)}</span>
+              <span>{formatTime(durationSeconds)}</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={playing ? playback.pause : playback.play}
-                disabled={busy}
+                onClick={togglePlay}
+                disabled={busy || (albumMode && !track)}
                 className="min-h-12 min-w-32 rounded-full bg-[var(--accent)] px-6 py-3 font-medium text-emerald-950 disabled:cursor-wait disabled:opacity-60"
               >
                 {buttonLabel}
               </button>
               <button
                 type="button"
-                onClick={playback.stop}
+                onClick={stopSource}
                 disabled={!active}
                 className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Stop
               </button>
-              <button
-                type="button"
-                onClick={exporting.download}
-                disabled={exporting.status === 'rendering'}
-                className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
-              >
-                {exporting.status === 'rendering' ? 'Rendering…' : 'Download'}
-              </button>
+              {!albumMode && (
+                <button
+                  type="button"
+                  onClick={exporting.download}
+                  disabled={exporting.status === 'rendering'}
+                  className="min-h-12 rounded-full border border-white/20 px-6 py-3 text-stone-200 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {exporting.status === 'rendering' ? 'Rendering…' : 'Download'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setZen(true)}
@@ -221,15 +341,22 @@ export default function App() {
               </button>
             </div>
             <p aria-live="polite" className="mt-3 text-xs text-stone-400">
-              {exporting.status === 'rendering'
-                ? `Rendering about ${Math.round(score.durationSeconds)} seconds of audio. This can take a minute with reverb.`
-                : 'Downloads a .wav file of this exact soundscape.'}
+              {albumMode
+                ? 'Audio comes from the local beta-album folder.'
+                : exporting.status === 'rendering'
+                  ? `Rendering about ${Math.round(score.durationSeconds)} seconds of audio. This can take a minute with reverb.`
+                  : 'Downloads a .wav file of this exact soundscape.'}
             </p>
-            {exporting.error && <p role="alert" className="mt-2 text-sm text-rose-200">{exporting.error}</p>}
+            {exporting.error && !albumMode && (
+              <p role="alert" className="mt-2 text-sm text-rose-200">{exporting.error}</p>
+            )}
+            {album.error && albumMode && (
+              <p role="alert" className="mt-2 text-sm text-rose-200">{album.error}</p>
+            )}
             <div className="mt-6">
               <label htmlFor="master-volume" className="flex justify-between text-sm text-stone-300">
                 <span>Volume</span>
-                <span>{Math.round(playback.volume * 100)}%</span>
+                <span>{Math.round(volume * 100)}%</span>
               </label>
               <input
                 id="master-volume"
@@ -237,48 +364,90 @@ export default function App() {
                 min="0"
                 max="100"
                 step="1"
-                value={Math.round(playback.volume * 100)}
-                onChange={(event) => playback.setVolume(Number(event.target.value) / 100)}
-                aria-valuetext={`${Math.round(playback.volume * 100)} percent`}
+                value={Math.round(volume * 100)}
+                onChange={(event) => {
+                  const next = Number(event.target.value) / 100
+                  if (albumMode) album.setVolume(next)
+                  else playback.setVolume(next)
+                }}
+                aria-valuetext={`${Math.round(volume * 100)} percent`}
                 className="mt-1 min-h-11 w-full cursor-pointer accent-[var(--accent)]"
               />
             </div>
             <p role="status" className="mt-4 text-sm text-stone-300">{statusText}</p>
-            {playback.error && <p role="alert" className="mt-3 text-sm text-rose-200">{playback.error}</p>}
+            {playback.error && !albumMode && (
+              <p role="alert" className="mt-3 text-sm text-rose-200">{playback.error}</p>
+            )}
           </div>
-          <div className="mt-6 border-t border-white/10 pt-6">
-            <h2 className="mb-3 text-sm font-medium text-stone-200">Preset</h2>
-            <PresetPicker activeId={settings.presetId} onSelect={selectPreset} disabled={busy} />
-            <p className="sr-only" aria-live="polite">
-              {preset.name}. {preset.description}. {scaleLabel(applied.parameters)} at {applied.parameters.tempo} BPM.
-            </p>
-          </div>
-          <div className="mt-6 border-t border-white/10 pt-6">
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-medium text-stone-200">Shape</h2>
-              <span className="text-xs text-stone-400" aria-live="polite">
-                {pending ? 'Growing…' : `Seed ${applied.parameters.seed}`}
-              </span>
+
+          {albumMode ? (
+            <div className="mt-6 border-t border-white/10 pt-6">
+              <h2 className="mb-3 text-sm font-medium text-stone-200">Album</h2>
+              <AlbumPicker
+                tracks={ALBUM_TRACKS}
+                activeId={album.trackId}
+                onSelect={selectTrack}
+                disabled={busy}
+              />
             </div>
-            <ParameterControls
-              parameters={parameters}
-              onChange={(next) => setSettings((current) => ({ ...current, parameters: next }))}
-              onRegrow={() => setSettings((current) => ({
-                ...current,
-                parameters: { ...current.parameters, seed: randomSeed(current.parameters.seed) },
-              }))}
-              disabled={busy}
+          ) : (
+            <>
+              <div className="mt-6 border-t border-white/10 pt-6">
+                <h2 className="mb-3 text-sm font-medium text-stone-200">Preset</h2>
+                <PresetPicker activeId={settings.presetId} onSelect={selectPreset} disabled={busy} />
+                <p className="sr-only" aria-live="polite">
+                  {preset.name}. {preset.description}. {scaleLabel(applied.parameters)} at {applied.parameters.tempo} BPM.
+                </p>
+              </div>
+              <div className="mt-6 border-t border-white/10 pt-6">
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-sm font-medium text-stone-200">Shape</h2>
+                  <span className="text-xs text-stone-400" aria-live="polite">
+                    {pending ? 'Growing…' : `Seed ${applied.parameters.seed}`}
+                  </span>
+                </div>
+                <ParameterControls
+                  parameters={parameters}
+                  onChange={(next) => applySettings({ ...settings, parameters: next })}
+                  onRegrow={() => applySettings({
+                    ...settings,
+                    parameters: { ...settings.parameters, seed: randomSeed(settings.parameters.seed) },
+                  })}
+                  disabled={busy}
+                />
+              </div>
+            </>
+          )}
+        </section>
+
+        <div className="order-1 flex w-full min-w-0 flex-col gap-4 lg:order-2">
+          <div className={zen ? 'h-[92svh]' : 'h-[40svh] min-h-56 lg:h-[52svh]'}>
+            <TreeCanvas
+              geometry={geometry}
+              getPositionSeconds={treePositionSeconds}
+              animating={playing}
+              palette={palette}
+              label={`Fractal tree with ${tree.nodes.length} branches, blooming as the music plays.`}
             />
           </div>
-        </section>
-        <div className={`order-1 w-full ${zen ? 'h-[92svh]' : 'h-[46svh] min-h-64 lg:order-2 lg:h-[78svh]'}`}>
-          <TreeCanvas
-            geometry={geometry}
-            getPositionSeconds={playback.getPositionSeconds}
-            animating={playing}
-            palette={palette}
-            label={`Fractal tree with ${tree.nodes.length} branches, blooming as the music plays.`}
-          />
+          {!zen && (
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <div className="h-52 min-w-0 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <FrequencyGraph
+                  getData={frequencyData}
+                  active={playing}
+                  accent={palette.accent}
+                  label="Live frequency graph of the music."
+                />
+              </div>
+              <div className="h-52 min-w-0">
+                <FunctionTrace
+                  getSignal={traceSignal}
+                  caption={albumMode ? 'driven by the music' : 'driven by the tree level'}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
       {zen && (
